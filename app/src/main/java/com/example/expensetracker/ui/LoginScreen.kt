@@ -26,12 +26,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.expensetracker.auth.AuthManager
 import com.example.expensetracker.auth.AuthResult
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
     authManager: AuthManager = remember { AuthManager() },
     onLoginSuccess: () -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
@@ -40,6 +42,7 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var isSignUpMode by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
@@ -394,29 +397,42 @@ fun LoginScreen(
                         errorMessage = null
                         successMessage = null
                         if (isSignUpMode) {
-                            val nameToUse = username.ifBlank { "New User" }
-                            val result = authManager.register(nameToUse, email, password, phoneNumber)
-                            when (result) {
-                                is AuthResult.Success -> {
-                                    successMessage = result.message
-                                    isSignUpMode = false
-                                }
-                                is AuthResult.Error -> {
-                                    errorMessage = result.message
+                            if (confirmPassword.isNotEmpty() && password != confirmPassword) {
+                                errorMessage = "Passwords do not match"
+                                return@Button
+                            }
+                            isLoading = true
+                            coroutineScope.launch {
+                                val nameToUse = username.ifBlank { "New User" }
+                                val result = authManager.register(nameToUse, email, password, phoneNumber)
+                                isLoading = false
+                                when (result) {
+                                    is AuthResult.Success -> {
+                                        successMessage = result.message
+                                        isSignUpMode = false
+                                    }
+                                    is AuthResult.Error -> {
+                                        errorMessage = result.message
+                                    }
                                 }
                             }
                         } else {
-                            val result = authManager.login(email, password)
-                            when (result) {
-                                is AuthResult.Success -> {
-                                    onLoginSuccess()
-                                }
-                                is AuthResult.Error -> {
-                                    errorMessage = result.message
+                            isLoading = true
+                            coroutineScope.launch {
+                                val result = authManager.login(email, password)
+                                isLoading = false
+                                when (result) {
+                                    is AuthResult.Success -> {
+                                        onLoginSuccess()
+                                    }
+                                    is AuthResult.Error -> {
+                                        errorMessage = result.message
+                                    }
                                 }
                             }
                         }
                     },
+                    enabled = !isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -426,12 +442,20 @@ fun LoginScreen(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text(
-                        text = if (isSignUpMode) "Sign Up" else "Login",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = if (isSignUpMode) "Sign Up" else "Login",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 // Don't have an account? Sign Up / Login toggle

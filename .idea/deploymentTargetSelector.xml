@@ -6,11 +6,11 @@
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="testCase_ET_EXPENSE_004_addExpenseWithSymbols_shouldDeny()">
+      <SelectionState runConfigName="TransactionUiTest">
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="testCase_ET_INCOME_004_addIncomeWithLetters_shouldDeny()">
+      <SelectionState runConfigName="AuthenticationUiTest">
         <option name="selectionMode" value="DROPDOWN" />
         <DialogSelection />
       </SelectionState>
