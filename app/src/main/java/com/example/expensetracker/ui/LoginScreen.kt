@@ -24,9 +24,12 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.expensetracker.auth.AuthManager
+import com.example.expensetracker.auth.AuthResult
 
 @Composable
 fun LoginScreen(
+    authManager: AuthManager = remember { AuthManager() },
     onLoginSuccess: () -> Unit
 ) {
     var username by remember { mutableStateOf("") }
@@ -37,6 +40,9 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
     var isSignUpMode by remember { mutableStateOf(false) }
+
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var successMessage by remember { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -103,6 +109,31 @@ fun LoginScreen(
                 }
 
                 Spacer(modifier = Modifier.height(2.dp))
+
+                // Error / Success Message Notification
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                if (successMessage != null) {
+                    Text(
+                        text = successMessage!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 // Username field (Sign Up mode only)
                 if (isSignUpMode) {
@@ -359,7 +390,33 @@ fun LoginScreen(
 
                 // Main Action Button (Login / Sign Up)
                 Button(
-                    onClick = onLoginSuccess,
+                    onClick = {
+                        errorMessage = null
+                        successMessage = null
+                        if (isSignUpMode) {
+                            val nameToUse = username.ifBlank { "New User" }
+                            val result = authManager.register(nameToUse, email, password, phoneNumber)
+                            when (result) {
+                                is AuthResult.Success -> {
+                                    successMessage = result.message
+                                    isSignUpMode = false
+                                }
+                                is AuthResult.Error -> {
+                                    errorMessage = result.message
+                                }
+                            }
+                        } else {
+                            val result = authManager.login(email, password)
+                            when (result) {
+                                is AuthResult.Success -> {
+                                    onLoginSuccess()
+                                }
+                                is AuthResult.Error -> {
+                                    errorMessage = result.message
+                                }
+                            }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -397,6 +454,8 @@ fun LoginScreen(
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.clickable {
                             isSignUpMode = !isSignUpMode
+                            errorMessage = null
+                            successMessage = null
                         }
                     )
                 }

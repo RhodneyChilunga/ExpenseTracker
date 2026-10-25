@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.expensetracker.transaction.TransactionValidationResult
+import com.example.expensetracker.transaction.TransactionValidator
 import com.example.expensetracker.viewmodel.Transaction
 import com.example.expensetracker.viewmodel.TransactionType
 
@@ -28,6 +30,7 @@ fun AddEditTransactionDialog(
     var description by remember { mutableStateOf(transactionToEdit?.description ?: "") }
 
     var expandedCategory by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val expenseCategories = listOf("Food", "Transport", "Rent", "School", "Airtime", "Shopping", "Entertainment", "Other")
     val incomeCategories = listOf("Allowance", "Salary", "Stipend", "Gift", "Freelance", "Other")
@@ -60,6 +63,7 @@ fun AddEditTransactionDialog(
                         onClick = {
                             type = TransactionType.EXPENSE
                             category = "Food"
+                            errorMessage = null
                         },
                         label = {
                             Text(
@@ -86,6 +90,7 @@ fun AddEditTransactionDialog(
                         onClick = {
                             type = TransactionType.INCOME
                             category = "Allowance"
+                            errorMessage = null
                         },
                         label = {
                             Text(
@@ -109,9 +114,22 @@ fun AddEditTransactionDialog(
                     )
                 }
 
+                // Error Message Display
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage!!,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
                 OutlinedTextField(
                     value = title,
-                    onValueChange = { title = it },
+                    onValueChange = {
+                        title = it
+                        errorMessage = null
+                    },
                     label = { Text(if (type == TransactionType.EXPENSE) "Merchant / Title" else "Income Source") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -119,7 +137,10 @@ fun AddEditTransactionDialog(
 
                 OutlinedTextField(
                     value = amountText,
-                    onValueChange = { amountText = it },
+                    onValueChange = { raw ->
+                        amountText = raw
+                        errorMessage = null
+                    },
                     label = { Text("Amount (MWK)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
@@ -152,6 +173,7 @@ fun AddEditTransactionDialog(
                                 onClick = {
                                     category = cat
                                     expandedCategory = false
+                                    errorMessage = null
                                 }
                             )
                         }
@@ -160,7 +182,10 @@ fun AddEditTransactionDialog(
 
                 OutlinedTextField(
                     value = date,
-                    onValueChange = { date = it },
+                    onValueChange = {
+                        date = it
+                        errorMessage = null
+                    },
                     label = { Text("Date (YYYY-MM-DD)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -177,10 +202,15 @@ fun AddEditTransactionDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val amount = amountText.toDoubleOrNull() ?: 0.0
-                    if (title.isNotBlank() && amount > 0.0) {
-                        onSave(title, amount, type, category, date, description)
-                        onDismiss()
+                    val result = TransactionValidator.validateTransaction(title, amountText, type, category)
+                    when (result) {
+                        is TransactionValidationResult.Success -> {
+                            onSave(title, result.amount, type, category, date, description)
+                            onDismiss()
+                        }
+                        is TransactionValidationResult.Error -> {
+                            errorMessage = result.message
+                        }
                     }
                 }
             ) {

@@ -69,39 +69,48 @@ class WalletViewModel : ViewModel() {
     val remainingBalance: Double
         get() = totalIncome - totalExpenses
 
-    val filteredTransactions: StateFlow<List<Transaction>> = combine(
-        _transactions,
-        _searchQuery,
-        _selectedCategoryFilter
-    ) { txList, queryStr, categoryFilter ->
-        val query = queryStr.trim().lowercase()
-        txList.filter { tx ->
-            val matchesQuery = query.isEmpty() ||
-                    tx.title.lowercase().contains(query) ||
-                    tx.category.lowercase().contains(query) ||
-                    tx.description.lowercase().contains(query) ||
-                    tx.date.lowercase().contains(query) ||
-                    tx.amount.toString().contains(query) ||
-                    String.format(Locale.getDefault(), "%.2f", tx.amount).contains(query)
+    val currentFilteredTransactions: List<Transaction>
+        get() {
+            val query = _searchQuery.value.trim().lowercase()
+            val categoryFilter = _selectedCategoryFilter.value
+            val txList = _transactions.value
+            return txList.filter { tx ->
+                val matchesQuery = query.isEmpty() ||
+                        tx.title.lowercase().contains(query) ||
+                        tx.category.lowercase().contains(query) ||
+                        tx.description.lowercase().contains(query) ||
+                        tx.date.lowercase().contains(query) ||
+                        tx.amount.toString().contains(query) ||
+                        String.format(Locale.getDefault(), "%.2f", tx.amount).contains(query)
 
-            if (query.isNotEmpty()) {
-                val queryIsCategory = txList.any { it.category.equals(query, ignoreCase = true) }
-                if (queryIsCategory) {
-                    matchesQuery
-                } else if (categoryFilter != null) {
-                    matchesQuery && tx.category.equals(categoryFilter, ignoreCase = true)
+                if (query.isNotEmpty()) {
+                    val queryIsCategory = txList.any { it.category.equals(query, ignoreCase = true) }
+                    if (queryIsCategory) {
+                        matchesQuery
+                    } else if (categoryFilter != null) {
+                        matchesQuery && tx.category.equals(categoryFilter, ignoreCase = true)
+                    } else {
+                        matchesQuery
+                    }
                 } else {
-                    matchesQuery
+                    categoryFilter == null || tx.category.equals(categoryFilter, ignoreCase = true)
                 }
-            } else {
-                categoryFilter == null || tx.category.equals(categoryFilter, ignoreCase = true)
             }
         }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = _transactions.value
-    )
+
+    val filteredTransactions: StateFlow<List<Transaction>> by lazy {
+        combine(
+            _transactions,
+            _searchQuery,
+            _selectedCategoryFilter
+        ) { _, _, _ ->
+            currentFilteredTransactions
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = _transactions.value
+        )
+    }
 
     val budgetAlerts: List<String>
         get() {
@@ -172,10 +181,16 @@ class WalletViewModel : ViewModel() {
         _transactions.update { list -> list.filter { it.id != id } }
     }
 
-    fun setBudgetLimit(category: String, limit: Double) {
+    fun clearTransactions() {
+        _transactions.value = emptyList()
+    }
+
+    fun setBudgetLimit(category: String, limit: Double): Boolean {
+        if (limit <= 0.0) return false
         _budgets.update { map ->
             map + (category to limit)
         }
+        return true
     }
 
     fun setSearchQuery(query: String) {
