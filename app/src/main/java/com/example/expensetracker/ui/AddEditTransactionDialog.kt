@@ -61,7 +61,24 @@ fun AddEditTransactionDialog(
                             type = TransactionType.EXPENSE
                             category = "Food"
                         },
-                        label = { Text("Expense") },
+                        label = {
+                            Text(
+                                text = "Expense",
+                                fontWeight = if (type == TransactionType.EXPENSE) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            labelColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = type == TransactionType.EXPENSE,
+                            selectedBorderColor = MaterialTheme.colorScheme.primary,
+                            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        ),
                         modifier = Modifier.weight(1f)
                     )
                     FilterChip(
@@ -70,7 +87,24 @@ fun AddEditTransactionDialog(
                             type = TransactionType.INCOME
                             category = "Allowance"
                         },
-                        label = { Text("Income") },
+                        label = {
+                            Text(
+                                text = "Income",
+                                fontWeight = if (type == TransactionType.INCOME) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            labelColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = type == TransactionType.INCOME,
+                            selectedBorderColor = MaterialTheme.colorScheme.primary,
+                            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        ),
                         modifier = Modifier.weight(1f)
                     )
                 }
